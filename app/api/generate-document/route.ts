@@ -281,6 +281,16 @@ async function updateDemande(params: {
 
 export async function POST(request: Request) {
   try {
+    // Auth guard — verify Bearer token before any processing
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!token) return Response.json({ error: "Non autorisé" }, { status: 401 });
+
+    const { createClient: createServerClient } = await import("@/lib/supabase/server");
+    const supabaseAuth = await createServerClient();
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !user) return Response.json({ error: "Non autorisé" }, { status: 401 });
+
     const payload = (await request.json()) as DocumentRequest;
     const demandeId = getDemandeId(payload);
 

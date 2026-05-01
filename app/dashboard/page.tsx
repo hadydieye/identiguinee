@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/status-badge";
+import { TYPE_DOCUMENT_LABELS } from "@/lib/types";
 import { FileText, FolderOpen, ShieldCheck, ArrowRight } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -15,8 +16,12 @@ export default async function DashboardPage() {
     .eq("id", user.id)
     .single();
 
-  // Données fictives pour l'activité récente (jusqu'à ce que la table demandes existe)
-  const recentActivity: { id: string; type: string; date: string; status: "EN_COURS" | "CERTIFIE" | "REJETE" }[] = [];
+  const { data: recentDemandes } = await supabase
+    .from("demandes")
+    .select("id, type_document, statut, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(5);
 
   const blocNum = profile?.id_blockchain?.replace("GN-2026-", "") ?? "000000";
 
@@ -99,7 +104,7 @@ export default async function DashboardPage() {
       <div>
         <h2 className="text-lg font-semibold text-white mb-4">Activité récente</h2>
         <div className="bg-[#0D1117] border border-white/10 rounded-2xl overflow-hidden">
-          {recentActivity.length === 0 ? (
+          {!recentDemandes?.length ? (
             <div className="py-12 text-center text-white/40">
               <FolderOpen className="w-8 h-8 mx-auto mb-3 opacity-40" />
               <p>Aucune activité pour le moment</p>
@@ -107,13 +112,13 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <ul className="divide-y divide-white/5">
-              {recentActivity.map((item) => (
-                <li key={item.id} className="flex items-center justify-between px-6 py-4">
+              {recentDemandes.map((d) => (
+                <li key={d.id} className="flex items-center justify-between px-6 py-4">
                   <div>
-                    <p className="text-white text-sm font-medium">{item.type}</p>
-                    <p className="text-white/40 text-xs mt-0.5">{item.date}</p>
+                    <p className="text-white text-sm font-medium">{TYPE_DOCUMENT_LABELS[d.type_document as keyof typeof TYPE_DOCUMENT_LABELS]}</p>
+                    <p className="text-white/40 text-xs mt-0.5">{new Date(d.created_at).toLocaleDateString("fr-FR")}</p>
                   </div>
-                  <StatusBadge status={item.status} />
+                  <StatusBadge status={d.statut.toUpperCase() as "EN_COURS" | "CERTIFIE" | "REJETE"} />
                 </li>
               ))}
             </ul>

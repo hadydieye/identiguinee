@@ -11,7 +11,8 @@ type TimelineStep = {
 
 export function TimelineBlockchain({ steps }: { steps: TimelineStep[] }) {
   return (
-    <div className="flex items-start gap-0 mt-3">
+    <div className="overflow-x-auto -mx-1">
+      <div className="flex items-start gap-0 mt-3 min-w-max px-1">
       {steps.map((step, i) => (
         <div key={step.label} className="flex items-start flex-1 last:flex-none">
           <div className="flex flex-col items-center">
@@ -59,6 +60,7 @@ export function TimelineBlockchain({ steps }: { steps: TimelineStep[] }) {
           )}
         </div>
       ))}
+      </div>
     </div>
   );
 }

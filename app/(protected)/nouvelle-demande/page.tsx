@@ -44,16 +44,6 @@ export default function NouvelleDemandePage() {
         return;
       }
       const { id } = await res.json();
-
-      // Certification automatique après 3 secondes
-      setTimeout(async () => {
-        await fetch("/api/demandes/certifier", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ demande_id: id }),
-        });
-      }, 3000);
-
       router.push("/mes-demandes");
     } catch {
       setError("Erreur réseau. Veuillez réessayer.");

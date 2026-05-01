@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { CheckCircle, Clock, Link2 } from "lucide-react";
 import { TypeDocument, TYPE_DOCUMENT_LABELS } from "@/lib/types";
 import { InfosFormData } from "./etape-informations";
@@ -17,11 +17,18 @@ export function EtapeConfirmation({
   onBack: () => void;
 }) {
   const [loading, setLoading] = useState(false);
+  const isSubmitting = useRef(false);
 
   const handleSubmit = async () => {
+    if (isSubmitting.current) return;
+    isSubmitting.current = true;
     setLoading(true);
-    await onSubmit();
-    setLoading(false);
+    try {
+      await onSubmit();
+    } finally {
+      isSubmitting.current = false;
+      setLoading(false);
+    }
   };
 
   const Row = ({ label, value }: { label: string; value: string }) =>
@@ -84,7 +91,7 @@ export function EtapeConfirmation({
           type="button"
           onClick={handleSubmit}
           disabled={loading}
-          className="flex-1 py-3 rounded-xl bg-[#009460] hover:bg-[#009460]/90 text-white font-semibold text-sm transition-colors disabled:opacity-60"
+          className="flex-1 py-3 rounded-xl bg-[#009460] hover:bg-[#009460]/90 text-white font-semibold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {loading ? "Soumission..." : "Soumettre ma demande"}
         </button>

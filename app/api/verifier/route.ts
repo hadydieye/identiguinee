@@ -4,7 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   const { reference } = await req.json();
 
-  if (!reference?.trim()) {
+  const ref = typeof reference === "string" ? reference.trim() : "";
+  if (!ref || ref.length > 30 || !/^GN-\d{4}-\d{4}-[A-F0-9]{4}$/.test(ref)) {
     return NextResponse.json({ resultat: "invalide" }, { status: 400 });
   }
 
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
       profiles ( nom, prenom ),
       documents_certifies ( hash, bloc_number, created_at )
     `)
-    .eq("reference", reference.trim())
+    .eq("reference", ref)
     .eq("statut", "certifie")
     .single();
 
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   // Enregistre la vérification
   await supabase.from("verifications").insert({
-    reference_document: reference.trim(),
+    reference_document: ref,
     ip_verificateur: ip,
     resultat,
   });

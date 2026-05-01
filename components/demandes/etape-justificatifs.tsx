@@ -3,7 +3,6 @@
 import { useRef, useState } from "react";
 import { Upload, X, FileText } from "lucide-react";
 import { TypeDocument, DOCUMENTS_REQUIS } from "@/lib/types";
-import { createClient } from "@/lib/supabase/client";
 
 export type JustificatifFile = {
   file: File;
@@ -47,14 +46,13 @@ export function EtapeJustificatifs({
     const updated = [...files, ...toAdd];
     onFilesChange(updated);
 
-    const supabase = createClient();
     const results = await Promise.all(
       toAdd.map(async (jf) => {
-        const path = `${Date.now()}-${jf.file.name}`;
-        const { data } = await supabase.storage
-          .from("justificatifs")
-          .upload(path, jf.file, { upsert: false });
-        return data?.path ?? null;
+        const fd = new FormData();
+        fd.append("file", jf.file);
+        const res = await fetch("/api/upload", { method: "POST", body: fd });
+        if (!res.ok) { setError((await res.json()).error ?? "Erreur upload"); return null; }
+        return (await res.json()).path as string;
       })
     );
 

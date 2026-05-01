@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -19,14 +18,15 @@ export default async function MesDemandesPage({
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
-  const { tab = "toutes" } = await searchParams;
+  const { tab: rawTab = "toutes" } = await searchParams;
+  const VALID_TABS = ["toutes", "en_cours", "certifie", "rejete"] as const;
+  const tab = VALID_TABS.includes(rawTab as typeof VALID_TABS[number]) ? rawTab as typeof VALID_TABS[number] : "toutes";
 
   const { data: rawDemandes } = await supabase
     .from("demandes")
     .select("*, documents_certifies(*)")
-    .eq("user_id", user.id)
+    .eq("user_id", user!.id)
     .order("created_at", { ascending: false });
 
   const demandes = rawDemandes ?? [];

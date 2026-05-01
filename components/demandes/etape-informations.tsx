@@ -124,10 +124,14 @@ export function EtapeInformations({
             <textarea
               className={`${inputCls} resize-none`}
               rows={3}
+              maxLength={500}
               placeholder="Précisez le motif..."
               value={data.motif}
               onChange={(e) => onChange({ motif: e.target.value })}
             />
+            <p className={`text-xs text-right ${data.motif.length >= 450 ? "text-[#CE1126]" : "text-white/30"}`}>
+              {data.motif.length}/500
+            </p>
           </div>
         </div>
       </div>

@@ -1,13 +1,28 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { FileText, Download, RefreshCw } from "lucide-react";
 import { DemandeAvecDocument, TYPE_DOCUMENT_LABELS } from "@/lib/types";
 import { TimelineBlockchain } from "./timeline-blockchain";
 import { formatDistanceToNow } from "@/lib/utils";
 
-export function DemandeCard({ demande }: { demande: DemandeAvecDocument }) {
+export function DemandeCard({ demande: initial }: { demande: DemandeAvecDocument }) {
+  const [demande, setDemande] = useState(initial);
   const { statut, reference, type_document, created_at, motif_rejet, documents_certifies } = demande;
   const doc = documents_certifies?.[0];
+
+  // Poll every 5s until url_pdf is available
+  useEffect(() => {
+    if (statut !== "certifie" || doc?.url_pdf) return;
+    const id = setInterval(async () => {
+      const res = await fetch(`/api/demandes/${demande.id}`);
+      if (!res.ok) return;
+      const updated = await res.json();
+      setDemande(updated);
+      if (updated.documents_certifies?.[0]?.url_pdf) clearInterval(id);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [statut, doc?.url_pdf, demande.id]);
 
   const createdDate = new Date(created_at);
   const timeAgo = formatDistanceToNow(createdDate);
@@ -67,16 +82,27 @@ export function DemandeCard({ demande }: { demande: DemandeAvecDocument }) {
       )}
 
       {/* Actions */}
-      {statut === "certifie" && doc?.url_pdf && (
-        <a
-          href={doc.url_pdf}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-[#009460] hover:bg-[#009460]/90 text-white text-sm font-semibold transition-colors"
-        >
-          <Download className="w-4 h-4" />
-          Télécharger
-        </a>
+      {statut === "certifie" && (
+        doc?.url_pdf ? (
+          <a
+            href={doc.url_pdf}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-[#009460] hover:bg-[#009460]/90 text-white text-sm font-semibold transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Télécharger
+          </a>
+        ) : (
+          <button
+            disabled
+            title="Document en cours de génération"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-[#009460]/40 text-white/50 text-sm font-semibold cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" />
+            Document en cours de génération…
+          </button>
+        )
       )}
       {statut === "rejete" && (
         <button className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-white/20 text-white/70 hover:border-white/40 text-sm font-medium transition-colors">
