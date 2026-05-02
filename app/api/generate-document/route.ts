@@ -308,10 +308,14 @@ export async function POST(request: Request) {
     const hash = createHash("sha256")
       .update(stableStringify({ payload, reference, timestamp }))
       .digest("hex");
+    const requestOrigin = new URL(request.url).origin;
+    const isInternal =
+      requestOrigin.includes("localhost") ||
+      requestOrigin.includes("127.0.0.1") ||
+      requestOrigin.includes("::1");
     const origin =
       process.env.NEXT_PUBLIC_SITE_URL ||
-      new URL(request.url).origin ||
-      "http://localhost:3000";
+      (isInternal ? "http://localhost:3000" : requestOrigin);
     const verificationUrl = `${origin}/verifier?ref=${encodeURIComponent(
       reference
     )}`;
