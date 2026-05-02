@@ -237,59 +237,44 @@ async function createCertifiedPdf(params: {
 async function updateDemande(params: {
   supabase: SupabaseAdminClient;
   demandeId: string;
-  reference: string;
   hash: string;
-  timestamp: string;
   publicUrl: string;
-  storagePath: string;
+  verificationUrl: string;
 }) {
-  const table = process.env.SUPABASE_DEMANDES_TABLE || DEFAULT_TABLE;
-  const statusColumn =
-    process.env.SUPABASE_DEMANDES_STATUS_COLUMN || DEFAULT_STATUS_COLUMN;
-  const statusValue = process.env.SUPABASE_CERTIFIED_STATUS || CERTIFIED_STATUS;
-
-  const fullUpdate: SupabaseUpdate = {
-    [statusColumn]: statusValue,
-    reference: params.reference,
-    hash: params.hash,
-    document_url: params.publicUrl,
-    document_path: params.storagePath,
-    certified_at: params.timestamp,
-  };
-
   const { error } = await params.supabase
-    .from(table)
-    .update(fullUpdate)
-    .eq("id", params.demandeId);
+    .from("documents_certifies")
+    .update({
+      pdf_url: params.publicUrl,
+      url_pdf: params.publicUrl,
+      qr_code_url: params.verificationUrl,
+      hash_document: params.hash,
+    })
+    .eq("demande_id", params.demandeId);
 
-  if (!error) {
-    return;
+  if (error) {
+    console.error(`[generate-document] updateDemande error:`, error);
+    throw error;
   }
-
-  const fallbackUpdate: SupabaseUpdate = {
-    [statusColumn]: statusValue,
-  };
-  const { error: fallbackError } = await params.supabase
-    .from(table)
-    .update(fallbackUpdate)
-    .eq("id", params.demandeId);
-
-  if (fallbackError) {
-    throw fallbackError;
-  }
+  console.log(`[generate-document] documents_certifies mis à jour pour demande: ${params.demandeId}`);
 }
 
 export async function POST(request: Request) {
   try {
-    // Auth guard — verify Bearer token before any processing
-    const authHeader = request.headers.get("Authorization");
-    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    if (!token) return Response.json({ error: "Non autorisé" }, { status: 401 });
+    // Auth guard — accept internal secret (server-to-server) or valid Bearer token
+    const internalSecret = process.env.INTERNAL_SECRET;
+    const xInternal = request.headers.get("X-Internal-Secret");
+    const isInternal = internalSecret && xInternal === internalSecret;
 
-    const { createClient: createServerClient } = await import("@/lib/supabase/server");
-    const supabaseAuth = await createServerClient();
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
-    if (authError || !user) return Response.json({ error: "Non autorisé" }, { status: 401 });
+    if (!isInternal) {
+      const authHeader = request.headers.get("Authorization");
+      const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+      if (!token) return Response.json({ error: "Non autorisé" }, { status: 401 });
+
+      const { createClient: createServerClient } = await import("@/lib/supabase/server");
+      const supabaseAuth = await createServerClient();
+      const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+      if (authError || !user) return Response.json({ error: "Non autorisé" }, { status: 401 });
+    }
 
     const payload = (await request.json()) as DocumentRequest;
     const demandeId = getDemandeId(payload);
@@ -337,23 +322,17 @@ export async function POST(request: Request) {
       });
 
     if (uploadError) {
+      console.error(`[generate-document] Upload error:`, uploadError);
       throw uploadError;
     }
+    console.log(`[generate-document] PDF uploadé: ${storagePath}`);
 
     const { data: publicUrlData } = supabase.storage
       .from(bucket)
       .getPublicUrl(storagePath);
     const publicUrl = publicUrlData.publicUrl;
 
-    await updateDemande({
-      supabase,
-      demandeId,
-      reference,
-      hash,
-      timestamp,
-      publicUrl,
-      storagePath,
-    });
+    await updateDemande({ supabase, demandeId, hash, publicUrl, verificationUrl });
 
     return Response.json({
       reference,

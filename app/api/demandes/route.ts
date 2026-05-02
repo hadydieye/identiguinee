@@ -111,7 +111,31 @@ export async function POST(req: NextRequest) {
     pdf_url: null,
   });
 
-  return NextResponse.json({ id: data.id, reference: data.reference, statut: "certifie" });
+  // Génération du PDF certifié
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+  console.log(`[demandes] Appel generate-document pour demande: ${data.id}`);
+  const genRes = await fetch(`${origin}/api/generate-document`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Internal-Secret": process.env.INTERNAL_SECRET ?? "",
+    },
+    body: JSON.stringify({ demandeId: data.id, nom, prenom, typeDocument: type_document }),
+  });
+  const genBody = await genRes.text();
+  console.log(`[demandes] Réponse generate-document: ${genRes.status} ${genBody}`);
+
+  // Récupérer la demande complète avec url_pdf
+  const { data: demande } = await supabase
+    .from("demandes")
+    .select("*, documents_certifies(url_pdf, pdf_url)")
+    .eq("id", data.id)
+    .single();
+
+  const url_pdf = demande?.documents_certifies?.[0]?.url_pdf ?? null;
+
+  return NextResponse.json({ id: data.id, reference: data.reference, statut: "certifie", url_pdf });
 }
 
 export async function GET(_req: NextRequest) {
