@@ -224,10 +224,10 @@ async function createCertifiedPdf(params: {
     height: 118,
   });
 
-  // Photo d'identité (3:4 → 75×100 px dans le PDF)
+  // Photo d'identité — coin supérieur droit, à côté du titre
   if (photoImage) {
-    page.drawImage(photoImage, { x: 95, y: 238, width: 75, height: 100 });
-    page.drawRectangle({ x: 95, y: 238, width: 75, height: 100, borderColor: rgb(0.86, 0.88, 0.9), borderWidth: 0.5 });
+    page.drawImage(photoImage, { x: 460, y: 690, width: 75, height: 100 });
+    page.drawRectangle({ x: 460, y: 690, width: 75, height: 100, borderColor: rgb(0.86, 0.88, 0.9), borderWidth: 0.5 });
   }
   page.drawText("Verifier l'authenticite", {
     x: 360,
