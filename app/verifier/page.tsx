@@ -174,9 +174,11 @@ export default function VerifierPage() {
             <label className="block text-sm text-white/70 mb-1.5">Identifiant blockchain</label>
             <input
               value={reference}
-              onChange={(e) => setReference(e.target.value)}
+              onChange={(e) => setReference(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === "Enter" && verify(reference)}
               placeholder="GN-2024-0042-7F3A"
+              autoCapitalize="characters"
+              style={{ textTransform: "uppercase" }}
               className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-[#009460] transition-colors font-mono text-sm"
             />
             <p className="text-white/30 text-xs mt-1.5">

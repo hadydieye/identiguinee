@@ -4,15 +4,14 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   const { reference } = await req.json();
 
-  const ref = typeof reference === "string" ? reference.trim() : "";
-  if (!ref || ref.length > 30 || !/^GN-\d{4}-\d{4}-[A-F0-9]{4}$/.test(ref)) {
+  const normalizedRef = typeof reference === "string" ? reference.trim().toUpperCase() : "";
+  if (!normalizedRef || normalizedRef.length > 30 || !/^GN-\d{4}-\d{4}-[A-F0-9]{4}$/.test(normalizedRef)) {
     return NextResponse.json({ resultat: "invalide" }, { status: 400 });
   }
 
   const supabase = await createClient();
   const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? null;
 
-  // Cherche la demande certifiée avec cette référence
   const { data: demande } = await supabase
     .from("demandes")
     .select(`
@@ -20,15 +19,14 @@ export async function POST(req: NextRequest) {
       profiles ( nom, prenom ),
       documents_certifies ( hash, bloc_number, created_at )
     `)
-    .eq("reference", ref)
+    .eq("reference", normalizedRef)
     .eq("statut", "certifie")
     .single();
 
   const resultat = demande ? "authentique" : "invalide";
 
-  // Enregistre la vérification
   await supabase.from("verifications").insert({
-    reference_document: ref,
+    reference_document: normalizedRef,
     ip_verificateur: ip,
     resultat,
   });
