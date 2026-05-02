@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -9,19 +9,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ resultat: "invalide" }, { status: 400 });
   }
 
-  const supabase = await createClient();
+  // Service role pour bypasser RLS sur une lecture publique contrôlée
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+
   const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? null;
 
-  const { data: demande } = await supabase
+  const { data: demande, error } = await supabase
     .from("demandes")
     .select(`
-      id, reference, type_document, statut, created_at,
-      profiles ( nom, prenom ),
+      id, reference, type_document, statut, nom, prenom, created_at,
       documents_certifies ( hash, bloc_number, created_at )
     `)
     .eq("reference", normalizedRef)
     .eq("statut", "certifie")
     .single();
+
+  if (error) console.error("[verifier] query error:", error.message);
 
   const resultat = demande ? "authentique" : "invalide";
 
@@ -39,13 +46,9 @@ export async function POST(req: NextRequest) {
     ? demande.documents_certifies[0]
     : demande.documents_certifies;
 
-  const profile = Array.isArray(demande.profiles)
-    ? demande.profiles[0]
-    : demande.profiles;
-
   return NextResponse.json({
     resultat: "authentique",
-    citoyen: `${profile?.prenom ?? ""} ${profile?.nom ?? ""}`.trim(),
+    citoyen: `${demande.prenom ?? ""} ${demande.nom ?? ""}`.trim(),
     type_document: demande.type_document,
     date: doc?.created_at ?? demande.created_at,
     hash: doc?.hash ?? null,
