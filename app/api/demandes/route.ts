@@ -112,7 +112,9 @@ export async function POST(req: NextRequest) {
   });
 
   // Génération du PDF certifié
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const origin = req.headers.get("x-forwarded-host")
+    ? `https://${req.headers.get("x-forwarded-host")}`
+    : process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
   console.log(`[demandes] Appel generate-document pour demande: ${data.id}`);
   const genRes = await fetch(`${origin}/api/generate-document`, {
