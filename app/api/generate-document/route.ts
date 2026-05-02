@@ -212,23 +212,18 @@ async function createCertifiedPdf(params: {
       size: label === "Hash SHA-256" ? 9 : 13,
       font,
       color: dark,
-      maxWidth: 405,
+      maxWidth: photoImage ? 300 : 405,
     });
     y -= label === "Hash SHA-256" ? 72 : 58;
   }
 
-  page.drawImage(qrImage, {
-    x: 375,
-    y: 238,
-    width: 118,
-    height: 118,
-  });
-
-  // Photo d'identité — coin supérieur droit, à côté du titre
+  // Photo d'identité — à droite des données (Nom, Type de document)
   if (photoImage) {
-    page.drawImage(photoImage, { x: 460, y: 690, width: 75, height: 100 });
-    page.drawRectangle({ x: 460, y: 690, width: 75, height: 100, borderColor: rgb(0.86, 0.88, 0.9), borderWidth: 0.5 });
+    page.drawImage(photoImage, { x: 415, y: 520, width: 75, height: 100 });
+    page.drawRectangle({ x: 415, y: 520, width: 75, height: 100, borderColor: rgb(0.86, 0.88, 0.9), borderWidth: 0.5 });
   }
+
+  page.drawImage(qrImage, { x: 375, y: 238, width: 118, height: 118 });
   page.drawText("Verifier l'authenticite", {
     x: 360,
     y: 218,
