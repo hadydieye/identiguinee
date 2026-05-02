@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Bell, User, LogOut, UserCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -63,8 +64,8 @@ export function Navbar({ prenom }: { prenom?: string }) {
       <div className="mx-auto max-w-6xl px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2">
-          <span className="text-[#FCD116] font-bold text-xl">Identi</span>
-          <span className="text-[#009460] font-bold text-xl">Guinée</span>
+          <Image src="/logo.png" alt="IdentiGuinée" width={32} height={32} className="rounded-lg" />
+          <span className="font-bold text-lg text-white">IdentiGuinée</span>
         </Link>
 
         {/* Actions */}

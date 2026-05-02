@@ -12,13 +12,10 @@ const links = [
   { label: "À propos", href: "#cta" },
 ];
 
+import Image from "next/image";
+
 function HexLogo() {
-  return (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-      <polygon points="16,2 28,9 28,23 16,30 4,23 4,9" fill="#006B3C" />
-      <text x="16" y="21" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold" fontFamily="sans-serif">I</text>
-    </svg>
-  );
+  return <Image src="/logo.png" alt="IdentiGuinée" width={32} height={32} className="rounded-lg" />;
 }
 
 export function NavbarPublic() {

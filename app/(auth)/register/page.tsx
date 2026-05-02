@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { generateIdBlockchain } from "@/lib/utils";
@@ -56,10 +57,9 @@ export default function RegisterPage() {
     <div className="w-full max-w-md">
       {/* Logo */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold">
-          <span className="text-[#FCD116]">Identi</span>
-          <span className="text-[#009460]">Guinée</span>
-        </h1>
+        <div className="flex justify-center mb-3">
+          <Image src="/logo.png" alt="IdentiGuinée" width={64} height={64} className="rounded-xl" />
+        </div>
         <p className="text-white/50 mt-2 text-sm">Identité numérique citoyenne</p>
       </div>
 

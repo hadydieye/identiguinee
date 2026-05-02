@@ -7,6 +7,7 @@ const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "IdentiGuinée — Identité numérique citoyenne",
   description: "Plateforme d'identité numérique pour les citoyens guinéens",
+  icons: { icon: "/logo.png", apple: "/logo.png" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
