@@ -288,10 +288,23 @@ export async function POST(request: Request) {
       );
     }
 
-    const reference = buildReference();
+    const supabase = getSupabaseAdmin();
+
+    const { data: demande } = await supabase
+      .from("demandes")
+      .select("reference, nom, prenom, type_document")
+      .eq("id", demandeId)
+      .single();
+
+    let reference: string = (demande?.reference as string | null) ?? "";
+    if (!reference) {
+      reference = buildReference();
+      await supabase.from("demandes").update({ reference }).eq("id", demandeId);
+    }
+
     const timestamp = new Date().toISOString();
-    const citizenName = getCitizenName(payload);
-    const documentType = getDocumentType(payload);
+    const citizenName = getCitizenName(payload) || `${demande?.prenom ?? ""} ${demande?.nom ?? ""}`.trim() || "Citoyen";
+    const documentType = getDocumentType(payload) || (demande?.type_document as string) || "Document administratif";
     const hash = createHash("sha256")
       .update(stableStringify({ payload, reference, timestamp }))
       .digest("hex");
@@ -312,7 +325,6 @@ export async function POST(request: Request) {
       verificationUrl,
     });
 
-    const supabase = getSupabaseAdmin();
     const bucket = process.env.SUPABASE_DOCUMENTS_BUCKET || DEFAULT_BUCKET;
     const storagePath = `${reference}.pdf`;
 

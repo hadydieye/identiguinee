@@ -23,6 +23,7 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false })
     .limit(5);
 
+  const enCoursCount = recentDemandes?.filter((d) => d.statut === "en_cours").length ?? 0;
   const blocNum = profile?.id_blockchain?.replace("GN-2026-", "") ?? "000000";
 
   return (
@@ -78,9 +79,11 @@ export default async function DashboardPage() {
               <h3 className="font-semibold text-white">Mes demandes</h3>
               <p className="text-white/50 text-sm mt-0.5">Suivre mes dossiers</p>
             </div>
-            <span className="bg-orange-500/20 text-orange-400 text-xs font-medium px-2 py-0.5 rounded-full border border-orange-500/30">
-              0 en cours
-            </span>
+            {enCoursCount > 0 && (
+              <span className="bg-orange-500/20 text-orange-400 text-xs font-medium px-2 py-0.5 rounded-full border border-orange-500/30">
+                {enCoursCount} en cours
+              </span>
+            )}
           </div>
           <ArrowRight className="w-4 h-4 text-white/40 mt-auto group-hover:translate-x-1 transition-transform" />
         </Link>
@@ -113,12 +116,24 @@ export default async function DashboardPage() {
           ) : (
             <ul className="divide-y divide-white/5">
               {recentDemandes.map((d) => (
-                <li key={d.id} className="flex items-center justify-between px-6 py-4">
-                  <div>
-                    <p className="text-white text-sm font-medium">{TYPE_DOCUMENT_LABELS[d.type_document as keyof typeof TYPE_DOCUMENT_LABELS]}</p>
-                    <p className="text-white/40 text-xs mt-0.5">{new Date(d.created_at).toLocaleDateString("fr-FR")}</p>
-                  </div>
-                  <StatusBadge status={d.statut.toUpperCase() as "EN_COURS" | "CERTIFIE" | "REJETE"} />
+                <li key={d.id}>
+                  <Link
+                    href={`/mes-demandes?tab=${d.statut}&highlight=${d.id}`}
+                    className="flex items-center justify-between px-6 py-4 hover:bg-white/5 transition-colors"
+                  >
+                    <div>
+                      <p className="text-white text-sm font-medium">
+                        {TYPE_DOCUMENT_LABELS[d.type_document as keyof typeof TYPE_DOCUMENT_LABELS]}
+                      </p>
+                      <p className="text-white/40 text-xs mt-0.5">
+                        {new Date(d.created_at).toLocaleDateString("fr-FR")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <StatusBadge status={d.statut.toUpperCase() as "EN_COURS" | "CERTIFIE" | "REJETE"} />
+                      <ArrowRight className="w-3.5 h-3.5 text-white/20" />
+                    </div>
+                  </Link>
                 </li>
               ))}
             </ul>
