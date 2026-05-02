@@ -20,9 +20,10 @@ export default function VerifierPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result>(null);
   const [scanActive, setScanActive] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const scannerRef = useRef<any>(null);
-  const scanDivId = "qr-reader";
+  const [cameraError, setCameraError] = useState("");
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const controlsRef = useRef<import("@zxing/browser").IScannerControls | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function verify(ref: string) {
     if (!ref.trim()) return;
@@ -41,30 +42,65 @@ export default function VerifierPage() {
   }
 
   async function startScanner() {
-    const { Html5Qrcode } = await import("html5-qrcode");
+    setCameraError("");
+    try {
+      await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    } catch {
+      setCameraError("Autorisez l'accès à la caméra dans les paramètres de votre navigateur.");
+      return;
+    }
+    const { BrowserMultiFormatReader } = await import("@zxing/browser");
+    const reader = new BrowserMultiFormatReader();
     setScanActive(true);
-    const scanner = new Html5Qrcode(scanDivId);
-    scannerRef.current = scanner;
-    await scanner.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: 250 },
-      (decoded) => {
-        setReference(decoded);
-        scanner.stop().then(() => setScanActive(false));
-        verify(decoded);
-      },
-      () => {}
-    );
-  }
-
-  async function stopScanner() {
-    if (scannerRef.current) {
-      await scannerRef.current.clear();
+    try {
+      const controls = await reader.decodeFromVideoDevice(undefined, videoRef.current!, (res) => {
+        if (res) {
+          const text = res.getText();
+          let ref = text;
+          try { ref = new URL(text).searchParams.get("ref") ?? text; } catch { /* plain ref */ }
+          setReference(ref);
+          stopScanner();
+          verify(ref);
+        }
+      });
+      controlsRef.current = controls;
+    } catch {
+      setCameraError("Impossible d'accéder à la caméra.");
       setScanActive(false);
     }
   }
 
-  useEffect(() => () => { scannerRef.current?.clear().catch(() => {}); }, []);
+  function stopScanner() {
+    controlsRef.current?.stop();
+    controlsRef.current = null;
+    setScanActive(false);
+  }
+
+  useEffect(() => () => { controlsRef.current?.stop(); }, []);
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const { BrowserMultiFormatReader } = await import("@zxing/browser");
+    const reader = new BrowserMultiFormatReader();
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.src = url;
+    img.onload = async () => {
+      try {
+        const res = await reader.decodeFromImageUrl(url);
+        const text = res.getText();
+        let ref = text;
+        try { ref = new URL(text).searchParams.get("ref") ?? text; } catch { /* plain ref */ }
+        setReference(ref);
+        verify(ref);
+      } catch {
+        setCameraError("Aucun QR code détecté dans l'image.");
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    };
+  }
 
   return (
     <div className="min-h-screen bg-[#06090F] px-4 py-12">
@@ -84,19 +120,26 @@ export default function VerifierPage() {
           <h2 className="text-white font-semibold">Scanner un QR code</h2>
 
           {/* Scan zone */}
-          <div
-            id={scanDivId}
-            className={`rounded-xl border-2 border-dashed border-[#009460]/50 overflow-hidden transition-all ${
-              scanActive ? "min-h-[280px]" : "min-h-[160px] flex items-center justify-center"
-            }`}
-          >
-            {!scanActive && (
+          <div className="rounded-xl border-2 border-dashed border-[#009460]/50 overflow-hidden min-h-[160px] flex items-center justify-center">
+            {scanActive ? (
+              <video
+                ref={videoRef}
+                playsInline
+                autoPlay
+                muted
+                className="w-full rounded-xl"
+              />
+            ) : (
               <div className="text-center py-8 space-y-3">
                 <Camera className="w-10 h-10 text-[#009460]/50 mx-auto" />
                 <p className="text-white/40 text-sm">Pointez la caméra vers le QR code du document</p>
               </div>
             )}
           </div>
+
+          {cameraError && (
+            <p className="text-[#CE1126] text-sm">{cameraError}</p>
+          )}
 
           <div className="flex gap-3">
             <button
@@ -106,10 +149,14 @@ export default function VerifierPage() {
               <Camera className="w-4 h-4" />
               {scanActive ? "Arrêter la caméra" : "Activer la caméra"}
             </button>
-            <button className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-white/20 hover:border-white/40 text-white text-sm rounded-lg transition-colors">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-white/20 hover:border-white/40 text-white text-sm rounded-lg transition-colors"
+            >
               <Upload className="w-4 h-4" />
               Importer une image
             </button>
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           </div>
         </div>
 
