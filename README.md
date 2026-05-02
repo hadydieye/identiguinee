@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# IdentiGuinée
 
-## Getting Started
+Plateforme d'identité numérique citoyenne pour la Guinée, permettant la demande, la certification et la vérification de documents administratifs via une blockchain simulée (NaissanceChain).
 
-First, run the development server:
+## Présentation
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+IdentiGuinée digitalise la délivrance de documents d'état civil en Guinée. Un citoyen crée un compte, soumet une demande de document, et reçoit un PDF certifié avec QR code en moins de 2 minutes. N'importe qui peut ensuite vérifier l'authenticité du document via la page publique `/verifier`.
+
+## Stack technique
+
+| Couche | Technologie |
+|---|---|
+| Framework | Next.js 16 (App Router, React 19) |
+| Backend / BDD | Supabase (PostgreSQL + Auth + Storage) |
+| Styling | Tailwind CSS v4 + shadcn/ui |
+| Animations | Framer Motion |
+| Génération PDF | pdf-lib |
+| QR Code | qrcode + @zxing/browser |
+| Déploiement | Vercel |
+
+## Structure du projet
+
+```
+app/
+├── page.tsx                        # Landing page publique
+├── (auth)/
+│   ├── login/page.tsx              # Connexion
+│   └── register/page.tsx           # Inscription
+├── (protected)/
+│   ├── nouvelle-demande/page.tsx   # Formulaire multi-étapes
+│   └── mes-demandes/page.tsx       # Suivi des dossiers
+├── dashboard/page.tsx              # Tableau de bord citoyen
+├── verifier/page.tsx               # Vérification publique (QR + saisie)
+└── api/
+    ├── demandes/route.ts           # POST (créer) / GET (lister)
+    ├── demandes/[id]/route.ts      # GET demande par ID
+    ├── demandes/certifier/route.ts # Certification manuelle
+    ├── generate-document/route.ts  # Génération PDF + upload Supabase Storage
+    ├── upload/route.ts             # Upload justificatifs
+    └── verifier/route.ts           # Vérification d'authenticité
+
+components/
+├── landing/                        # Hero, Stats, FlowSteps, NaissanceChain, CTA, Navbar
+└── demandes/                       # DocumentTypeSelector, FormStepper, EtapeInformations,
+                                    # EtapeJustificatifs, EtapeConfirmation, DemandeCard,
+                                    # TimelineBlockchain
+
+lib/
+├── types.ts                        # Types TypeScript + constantes (TypeDocument, StatutDemande…)
+├── utils.ts                        # generateIdBlockchain, cn()
+├── communes.ts                     # Liste des communes de Guinée
+└── supabase/
+    ├── client.ts                   # Client Supabase côté navigateur
+    └── server.ts                   # Client Supabase côté serveur (SSR)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Base de données (Supabase)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Table | Description |
+|---|---|
+| `profiles` | Profil citoyen (nom, prénom, commune, id_blockchain) |
+| `demandes` | Demandes de documents avec statut, hash SHA-256 et id blockchain |
+| `documents_certifies` | PDF certifié, hash, numéro de bloc, URL de stockage |
+| `justificatifs` | Fichiers justificatifs uploadés |
+| `verifications` | Journal des vérifications (référence, IP, résultat) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Types de documents supportés
 
-## Learn More
+- Acte de naissance
+- Carte nationale d'identité (CNI)
+- Passeport
+- Certificat de nationalité
 
-To learn more about Next.js, take a look at the following resources:
+### Statuts d'une demande
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`en_cours` → `certifie` | `rejete`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Flux principal
 
-## Deploy on Vercel
+1. **Inscription** — le citoyen crée un compte avec ses informations et sa commune ; un `id_blockchain` unique (`GN-2026-XXXXXX`) lui est attribué.
+2. **Nouvelle demande** — formulaire en 4 étapes : type de document → informations personnelles → justificatifs → confirmation.
+3. **Certification automatique** — à la soumission, l'API `/api/demandes` génère une référence (`GN-AAAA-NNNN-XXXX`), un hash SHA-256, certifie immédiatement la demande et appelle `/api/generate-document`.
+4. **Génération PDF** — un PDF certifié est créé avec pdf-lib (couleurs du drapeau guinéen, QR code, hash, timestamp) et uploadé dans Supabase Storage.
+5. **Vérification** — la page `/verifier` permet à quiconque de scanner le QR code ou saisir la référence pour confirmer l'authenticité du document.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Variables d'environnement
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+INTERNAL_SECRET=          # Secret partagé entre /api/demandes et /api/generate-document
+NEXT_PUBLIC_SITE_URL=     # URL de production (ex: https://identiguinee-one.vercel.app)
+```
+
+## Lancer le projet en local
+
+```bash
+npm install
+npm run dev
+```
+
+Ouvrir [http://localhost:3000](http://localhost:3000).
+
+## Déploiement
+
+Le projet est déployé sur Vercel : [identiguinee-one.vercel.app](https://identiguinee-one.vercel.app)
+
+```bash
+npm run build   # vérification locale avant déploiement
+```
