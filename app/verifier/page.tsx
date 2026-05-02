@@ -43,17 +43,21 @@ export default function VerifierPage() {
 
   async function startScanner() {
     setCameraError("");
+    let stream: MediaStream;
     try {
-      await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
     } catch {
       setCameraError("Autorisez l'accès à la caméra dans les paramètres de votre navigateur.");
       return;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
     }
     const { BrowserMultiFormatReader } = await import("@zxing/browser");
     const reader = new BrowserMultiFormatReader();
     setScanActive(true);
     try {
-      const controls = await reader.decodeFromVideoDevice(undefined, videoRef.current!, (res) => {
+      const controls = await reader.decodeFromStream(stream, videoRef.current!, (res) => {
         if (res) {
           const text = res.getText();
           let ref = text;
@@ -73,6 +77,10 @@ export default function VerifierPage() {
   function stopScanner() {
     controlsRef.current?.stop();
     controlsRef.current = null;
+    if (videoRef.current?.srcObject) {
+      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+      videoRef.current.srcObject = null;
+    }
     setScanActive(false);
   }
 
@@ -120,16 +128,15 @@ export default function VerifierPage() {
           <h2 className="text-white font-semibold">Scanner un QR code</h2>
 
           {/* Scan zone */}
-          <div className="rounded-xl border-2 border-dashed border-[#009460]/50 overflow-hidden min-h-[160px] flex items-center justify-center">
-            {scanActive ? (
-              <video
-                ref={videoRef}
-                playsInline
-                autoPlay
-                muted
-                className="w-full rounded-xl"
-              />
-            ) : (
+          <div className="rounded-xl border-2 border-dashed border-[#009460]/50 overflow-hidden min-h-[200px] flex items-center justify-center">
+            <video
+              ref={videoRef}
+              playsInline
+              autoPlay
+              muted
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: scanActive ? "block" : "none", minHeight: "200px" }}
+            />
+            {!scanActive && (
               <div className="text-center py-8 space-y-3">
                 <Camera className="w-10 h-10 text-[#009460]/50 mx-auto" />
                 <p className="text-white/40 text-sm">Pointez la caméra vers le QR code du document</p>

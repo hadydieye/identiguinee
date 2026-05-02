@@ -1,4 +1,4 @@
-import { createHash, randomInt } from "crypto";
+import { createHash, randomBytes, randomInt } from "crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import QRCode from "qrcode";
@@ -81,7 +81,9 @@ function stableStringify(value: unknown): string {
 }
 
 function buildReference() {
-  return `GN-2026-${randomInt(0, 10_000).toString().padStart(4, "0")}`;
+  const digits = randomInt(0, 10_000).toString().padStart(4, "0");
+  const hex = randomBytes(2).toString("hex").toUpperCase();
+  return `GN-2026-${digits}-${hex}`;
 }
 
 function getCitizenName(payload: DocumentRequest) {
