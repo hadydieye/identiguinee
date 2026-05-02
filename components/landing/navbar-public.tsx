@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import { motion } from "framer-motion";
 
 const links = [
   { label: "Accueil", href: "#" },
@@ -11,6 +11,15 @@ const links = [
   { label: "NaissanceChain", href: "#naissancechain" },
   { label: "À propos", href: "#cta" },
 ];
+
+function HexLogo() {
+  return (
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <polygon points="16,2 28,9 28,23 16,30 4,23 4,9" fill="#006B3C" />
+      <text x="16" y="21" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold" fontFamily="sans-serif">I</text>
+    </svg>
+  );
+}
 
 export function NavbarPublic() {
   const [scrolled, setScrolled] = useState(false);
@@ -24,24 +33,22 @@ export function NavbarPublic() {
 
   return (
     <motion.header
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
       className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-        scrolled ? "bg-[#06090F]/90 backdrop-blur-md border-b border-white/10" : "bg-transparent"
+        scrolled ? "bg-[#0D0D0D]/95 backdrop-blur-md border-b border-white/10" : "bg-[#0D0D0D]/95 backdrop-blur-md"
       }`}
     >
       <div className="mx-auto max-w-6xl px-4 h-16 flex items-center justify-between">
-        {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#009460]" />
-          <span className="font-bold text-lg text-white">
-            Identi<span className="text-[#009460]">Guinée</span>
+          <HexLogo />
+          <span className="font-bold text-[20px] text-white" style={{ fontFamily: "var(--font-clash, sans-serif)" }}>
+            IdentiGuinée
           </span>
         </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-6 text-sm text-white/70">
+        <nav className="hidden md:flex items-center gap-7 text-[15px] text-white/70">
           {links.map((l) => (
             <Link key={l.label} href={l.href} className="hover:text-white transition-colors">
               {l.label}
@@ -49,43 +56,36 @@ export function NavbarPublic() {
           ))}
         </nav>
 
-        {/* Desktop CTA */}
         <div className="hidden md:flex items-center gap-3">
           <Link
             href="/login"
-            className="px-4 py-2 rounded-lg border border-white/20 text-sm text-white hover:border-white/40 transition-colors"
+            className="px-5 py-2.5 rounded-xl border border-[#C9A84C] text-[#C9A84C] text-sm font-medium hover:bg-[#C9A84C]/10 transition-colors"
           >
             Se connecter
           </Link>
           <Link
             href="/register"
-            className="px-4 py-2 rounded-lg bg-[#009460] hover:bg-[#007a50] text-sm text-white font-medium transition-colors"
+            className="px-5 py-2.5 rounded-xl bg-[#006B3C] hover:bg-[#005a32] text-white text-sm font-medium transition-colors"
           >
             Faire une demande
           </Link>
         </div>
 
-        {/* Mobile toggle */}
         <button className="md:hidden text-white" onClick={() => setOpen(!open)}>
           {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
-      {/* Mobile menu */}
       {open && (
-        <div className="md:hidden bg-[#06090F] border-t border-white/10 px-4 py-4 space-y-3">
+        <div className="md:hidden bg-[#0D0D0D] border-t border-white/10 px-4 py-4 space-y-3">
           {links.map((l) => (
-            <Link key={l.label} href={l.href} className="block text-white/70 hover:text-white text-sm py-1">
+            <Link key={l.label} href={l.href} onClick={() => setOpen(false)} className="block text-white/70 hover:text-white text-sm py-1">
               {l.label}
             </Link>
           ))}
           <div className="flex flex-col gap-2 pt-2">
-            <Link href="/login" className="text-center px-4 py-2 rounded-lg border border-white/20 text-sm text-white">
-              Se connecter
-            </Link>
-            <Link href="/register" className="text-center px-4 py-2 rounded-lg bg-[#009460] text-sm text-white font-medium">
-              Faire une demande
-            </Link>
+            <Link href="/login" className="text-center px-4 py-2 rounded-xl border border-[#C9A84C] text-[#C9A84C] text-sm">Se connecter</Link>
+            <Link href="/register" className="text-center px-4 py-2 rounded-xl bg-[#006B3C] text-white text-sm font-medium">Faire une demande</Link>
           </div>
         </div>
       )}

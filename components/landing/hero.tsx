@@ -1,142 +1,185 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ShieldCheck } from "lucide-react";
 
-function Particles() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [show, setShow] = useState(false);
+/* ── Kente SVG pattern ── */
+function KentePattern() {
+  return (
+    <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.04 }}>
+      <defs>
+        <pattern id="kente" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+          {/* diamond */}
+          <polygon points="20,4 36,20 20,36 4,20" fill="none" stroke="#C9A84C" strokeWidth="1" />
+          {/* zigzag */}
+          <polyline points="0,10 10,20 0,30" fill="none" stroke="#C9A84C" strokeWidth="0.8" />
+          <polyline points="40,10 30,20 40,30" fill="none" stroke="#C9A84C" strokeWidth="0.8" />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#kente)" />
+    </svg>
+  );
+}
 
-  useEffect(() => { setShow(window.innerWidth >= 768); }, []);
+/* ── Floating hexagons ── */
+const hexagons = [
+  { size: 120, top: "8%",  left: "5%",  rotate: 15 },
+  { size: 60,  top: "20%", right: "8%", rotate: -20 },
+  { size: 80,  top: "55%", left: "2%",  rotate: 30 },
+  { size: 40,  top: "70%", right: "15%",rotate: -10 },
+  { size: 100, bottom: "10%", left: "40%", rotate: 45 },
+  { size: 50,  top: "40%", right: "3%", rotate: 25 },
+];
 
-  useEffect(() => {
-    if (!show) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-    const dots = Array.from({ length: 60 }, () => ({
-      x: Math.random() * canvas.width, y: Math.random() * canvas.height,
-      r: Math.random() * 1.5 + 0.5,
-      dx: (Math.random() - 0.5) * 0.3, dy: (Math.random() - 0.5) * 0.3,
-      opacity: Math.random() * 0.4 + 0.1,
-    }));
-    let raf: number;
-    function draw() {
-      if (!ctx || !canvas) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (const d of dots) {
-        ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(0, 148, 96, ${d.opacity})`; ctx.fill();
-        d.x += d.dx; d.y += d.dy;
-        if (d.x < 0 || d.x > canvas.width) d.dx *= -1;
-        if (d.y < 0 || d.y > canvas.height) d.dy *= -1;
-      }
-      raf = requestAnimationFrame(draw);
-    }
-    draw();
-    return () => cancelAnimationFrame(raf);
-  }, [show]);
+function FloatingHexagons() {
+  return (
+    <>
+      {hexagons.map((h, i) => (
+        <div
+          key={i}
+          className="absolute pointer-events-none"
+          style={{ top: h.top, left: h.left, right: (h as { right?: string }).right, bottom: (h as { bottom?: string }).bottom }}
+        >
+          <svg width={h.size} height={h.size} viewBox="0 0 100 100" style={{ transform: `rotate(${h.rotate}deg)`, opacity: 0.15 }}>
+            <polygon points="50,5 93,27.5 93,72.5 50,95 7,72.5 7,27.5" fill="#006B3C" />
+          </svg>
+        </div>
+      ))}
+    </>
+  );
+}
 
-  if (!show) return null;
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />;
+/* ── Document card ── */
+function CertifiedCard() {
+  const shouldReduce = useReducedMotion();
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 40 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: shouldReduce ? 0 : 0.7, delay: shouldReduce ? 0 : 0.3 }}
+      className="hidden md:block flex-shrink-0 w-[300px]"
+    >
+      <motion.div
+        animate={shouldReduce ? {} : { y: [0, -10, 0] }}
+        transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+        style={{ transform: "rotate(5deg)", boxShadow: "0 0 40px rgba(0,232,122,0.3)" }}
+        className="bg-[#1A1A2E] border border-[#2D3748] rounded-2xl p-6"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-white/40 text-[9px] uppercase tracking-widest font-mono">République de Guinée</p>
+            <p className="text-white font-bold text-sm mt-0.5 uppercase tracking-wide">Acte de Naissance</p>
+          </div>
+          <span className="flex items-center gap-1.5 bg-[#00E87A]/15 text-[#00E87A] text-[9px] font-bold px-2.5 py-1 rounded-full border border-[#00E87A]/40" style={{ boxShadow: "0 0 10px rgba(0,232,122,0.3)" }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00E87A] animate-pulse" />
+            CERTIFIÉ
+          </span>
+        </div>
+
+        <div className="space-y-2 text-xs">
+          {[["Nom","DIALLO"],["Prénom","Mamadou"],["Date de naissance","14 mars 1995"],["ID Blockchain","GN-2026-847291"],["Commune","Conakry"]].map(([k,v]) => (
+            <div key={k} className="flex justify-between">
+              <span className="text-white/40">{k}</span>
+              <span className="text-white font-medium font-mono text-[10px]">{v}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
+          <div className="w-10 h-10 bg-white/5 rounded-lg border border-white/10 flex items-center justify-center">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              {[0,1,2,3,4,5,6].map(r => [0,1,2,3,4,5,6].map(c => (
+                Math.random() > 0.5 ? <rect key={`${r}-${c}`} x={c*4} y={r*4} width="3" height="3" fill="white" opacity="0.6" /> : null
+              )))}
+            </svg>
+          </div>
+          <div className="text-right">
+            <p className="text-white/30 text-[9px]">Signé par NaissanceChain</p>
+            <p className="text-[#00E87A] text-[10px] font-mono">0x7f3a...b291</p>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
 }
 
 export function Hero() {
   const shouldReduce = useReducedMotion();
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => { setIsMobile(window.innerWidth < 768); }, []);
-
   const fadeUp = (delay = 0) => ({
-    initial: { opacity: 0, ...(shouldReduce || isMobile ? {} : { y: 24 }) },
-    animate: { opacity: 1, ...(shouldReduce || isMobile ? {} : { y: 0 }) },
+    initial: { opacity: 0, y: shouldReduce ? 0 : 24 },
+    animate: { opacity: 1, y: 0 },
     transition: { duration: shouldReduce ? 0 : 0.6, delay: shouldReduce ? 0 : delay },
   });
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden">
-      <Particles />
-      <div className="hidden md:block absolute top-1/3 left-1/4 w-96 h-96 bg-[#009460]/10 rounded-full blur-3xl pointer-events-none" />
+    <section className="relative min-h-screen flex items-center overflow-hidden" style={{ background: "#0D0D0D" }}>
+      {/* Diagonal gradient overlay */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, rgba(0,107,60,0.35) 0%, transparent 60%)" }} />
+      {/* Kente pattern */}
+      <KentePattern />
+      {/* Floating hexagons */}
+      <FloatingHexagons />
+      {/* Radial glow behind headline */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] pointer-events-none" style={{ background: "radial-gradient(ellipse, rgba(0,107,60,0.20) 0%, transparent 70%)" }} />
 
       <div className="relative mx-auto max-w-6xl px-4 w-full py-24 pt-28">
-        {/* Two-column layout: text left, card right */}
         <div className="flex flex-col md:flex-row md:items-center gap-12">
 
           {/* Left — text */}
-          <div className="flex-1 space-y-6 md:max-w-[55%]">
-            <motion.h1 {...fadeUp(0.1)} className="text-4xl md:text-5xl font-bold leading-tight text-white">
-              Fini les pots-de-vin pour{" "}
-              <span className="text-[#009460]">vos papiers officiels</span>
+          <div className="flex-1 space-y-7 md:max-w-[55%]">
+            {/* Badge */}
+            <motion.div {...fadeUp(0)} className="inline-flex items-center gap-2">
+              <span
+                className="flex items-center gap-2 text-[11px] font-mono text-[#C9A84C] border border-[#C9A84C] rounded-full px-4 py-1.5"
+                style={{ background: "rgba(201,168,76,0.10)", letterSpacing: "0.05em" }}
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12"><polygon points="6,1 11,3.5 11,8.5 6,11 1,8.5 1,3.5" fill="#C9A84C" /></svg>
+                MIABE Hackathon 2026 · GN-02
+              </span>
+            </motion.div>
+
+            {/* Headline */}
+            <motion.h1 {...fadeUp(0.1)} className="text-5xl md:text-[64px] font-bold leading-[1.1] text-white" style={{ fontFamily: "var(--font-clash, sans-serif)" }}>
+              Fini les pots-de-vin<br />
+              <span style={{ color: "#00E87A" }}>pour vos papiers officiels</span>
             </motion.h1>
 
-            <motion.p {...fadeUp(0.2)} className="text-white/60 text-lg leading-relaxed">
+            {/* Sub */}
+            <motion.p {...fadeUp(0.2)} className="text-[18px] leading-relaxed max-w-[600px]" style={{ color: "#A0AEC0" }}>
               IdentiGuinée automatise la délivrance de documents d&apos;identité par blockchain.
               Zéro intermédiaire. Zéro corruption possible. Vos documents en 2 minutes.
             </motion.p>
 
-            <motion.div {...fadeUp(0.3)} className="flex flex-wrap gap-3">
-              <Link href="/register" className="px-6 py-3 bg-[#009460] hover:bg-[#007a50] text-white font-semibold rounded-lg transition-colors">
+            {/* CTAs */}
+            <motion.div {...fadeUp(0.3)} className="flex flex-wrap gap-4">
+              <Link
+                href="/register"
+                className="px-8 py-4 rounded-xl text-white font-semibold text-[16px] transition-all"
+                style={{ background: "#006B3C", boxShadow: "0 0 24px rgba(0,107,60,0.40)" }}
+              >
                 Faire une demande
               </Link>
-              <a href="#flow" className="px-6 py-3 border border-white/20 hover:border-white/40 text-white rounded-lg transition-colors">
+              <a
+                href="#flow"
+                className="px-8 py-4 rounded-xl font-semibold text-[16px] transition-colors"
+                style={{ border: "1px solid #C9A84C", color: "#C9A84C", background: "transparent" }}
+              >
                 Comment ça marche
               </a>
             </motion.div>
 
-            <motion.div {...fadeUp(0.4)} className="flex items-center gap-2 text-sm text-white/40">
-              <ShieldCheck className="w-4 h-4 text-[#009460] shrink-0" />
-              <span>Sécurisé par blockchain · Document en 2 minutes · Aucune officialité</span>
+            {/* Trust indicators */}
+            <motion.div {...fadeUp(0.4)} className="flex flex-wrap items-center gap-4 text-[13px]" style={{ color: "#A0AEC0" }}>
+              <span>🔒 Sécurisé par blockchain</span>
+              <span className="w-px h-4 bg-white/20" />
+              <span>⚡ Document en 2 minutes</span>
+              <span className="w-px h-4 bg-white/20" />
+              <span>✓ Reconnu officiellement</span>
             </motion.div>
           </div>
 
-          {/* Right — floating card, desktop only */}
-          <motion.div
-            initial={{ opacity: 0, x: shouldReduce ? 0 : 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: shouldReduce ? 0 : 0.7, delay: shouldReduce ? 0 : 0.3 }}
-            className="hidden md:block flex-shrink-0 w-[320px]"
-          >
-            <motion.div
-              animate={shouldReduce ? {} : { y: [0, -10, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-              className="bg-[#0D1117] border border-white/10 rounded-2xl p-5 shadow-2xl shadow-black/60"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-white/40 text-[10px] uppercase tracking-widest">République de Guinée</p>
-                  <p className="text-white font-semibold text-sm mt-0.5">Acte de Naissance</p>
-                </div>
-                <span className="flex items-center gap-1.5 bg-[#009460]/20 text-[#009460] text-[10px] font-semibold px-2 py-1 rounded-full border border-[#009460]/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#009460] animate-pulse" />
-                  CERTIFIÉ
-                </span>
-              </div>
-
-              <div className="space-y-2 text-xs">
-                {[["Nom","DIALLO"],["Prénom","Mamadou"],["Date de naissance","14 mars 1995"],["N°","GN-2026-847291"],["Commune","Conakry"]].map(([k,v]) => (
-                  <div key={k} className="flex justify-between">
-                    <span className="text-white/40">{k}</span>
-                    <span className="text-white font-medium">{v}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
-                <div className="w-9 h-9 bg-white/5 rounded border border-white/10 flex items-center justify-center">
-                  <span className="text-[7px] text-white/30 font-mono">QR</span>
-                </div>
-                <div className="text-right">
-                  <p className="text-white/30 text-[10px]">Signé par NaissanceChain</p>
-                  <p className="text-[#009460] text-[10px] font-mono">0x7f3a...b291</p>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-
+          {/* Right — card */}
+          <CertifiedCard />
         </div>
       </div>
     </section>

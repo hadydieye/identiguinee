@@ -3,11 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 
 const MAX_SIZE = 5 * 1024 * 1024;
 
-// Magic bytes → MIME
+// Magic bytes → MIME (images uniquement, cohérent avec le front)
 const MAGIC: [Uint8Array, string][] = [
-  [new Uint8Array([0x25, 0x50, 0x44, 0x46]), "application/pdf"], // %PDF
-  [new Uint8Array([0xff, 0xd8, 0xff]), "image/jpeg"],            // JPEG
-  [new Uint8Array([0x89, 0x50, 0x4e, 0x47]), "image/png"],       // PNG
+  [new Uint8Array([0xff, 0xd8, 0xff]), "image/jpeg"],             // JPEG
+  [new Uint8Array([0x89, 0x50, 0x4e, 0x47]), "image/png"],        // PNG
+  [new Uint8Array([0x52, 0x49, 0x46, 0x46]), "image/webp"],       // WEBP (RIFF....)
 ];
 
 function detectMime(bytes: Uint8Array): string | null {
@@ -32,15 +32,19 @@ export async function POST(req: NextRequest) {
   const buffer = new Uint8Array(await file.arrayBuffer());
   const mime = detectMime(buffer);
   if (!mime)
-    return NextResponse.json({ error: "Type de fichier non autorisé" }, { status: 400 });
+    return NextResponse.json({ error: "Type de fichier non autorisé (JPG, PNG, WEBP uniquement)" }, { status: 400 });
 
-  const ext = mime === "application/pdf" ? "pdf" : mime === "image/jpeg" ? "jpg" : "png";
+  const ext = mime === "image/jpeg" ? "jpg" : mime === "image/png" ? "png" : "webp";
   const path = `${user.id}/${Date.now()}.${ext}`;
 
   const { data, error } = await supabase.storage
     .from("justificatifs")
     .upload(path, buffer, { contentType: mime, upsert: false });
 
-  if (error) return NextResponse.json({ error: "Erreur upload" }, { status: 500 });
+  if (error) {
+    console.error("[upload] Supabase Storage error:", error.message, error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
   return NextResponse.json({ path: data.path });
 }

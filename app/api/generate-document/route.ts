@@ -15,6 +15,7 @@ type DocumentRequest = {
   typeDocument?: string;
   type_document?: string;
   type?: string;
+  photo_identite?: string; // base64 JPEG recadrée 3:4
   citoyen?: {
     nom?: string;
     prenom?: string;
@@ -117,6 +118,7 @@ async function createCertifiedPdf(params: {
   hash: string;
   timestamp: string;
   verificationUrl: string;
+  photoBase64?: string;
 }) {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595.28, 841.89]);
@@ -128,6 +130,18 @@ async function createCertifiedPdf(params: {
     width: 220,
   });
   const qrImage = await pdfDoc.embedPng(qrDataUrl);
+
+  // Embed photo d'identité si fournie
+  let photoImage: Awaited<ReturnType<typeof pdfDoc.embedJpg>> | null = null;
+  if (params.photoBase64) {
+    try {
+      const base64Data = params.photoBase64.replace(/^data:image\/\w+;base64,/, "");
+      const photoBytes = Buffer.from(base64Data, "base64");
+      photoImage = await pdfDoc.embedJpg(photoBytes);
+    } catch {
+      // photo invalide, on ignore
+    }
+  }
 
   const green = rgb(0, 0.58, 0.38);
   const yellow = rgb(0.99, 0.82, 0.09);
@@ -209,6 +223,12 @@ async function createCertifiedPdf(params: {
     width: 118,
     height: 118,
   });
+
+  // Photo d'identité (3:4 → 75×100 px dans le PDF)
+  if (photoImage) {
+    page.drawImage(photoImage, { x: 95, y: 238, width: 75, height: 100 });
+    page.drawRectangle({ x: 95, y: 238, width: 75, height: 100, borderColor: rgb(0.86, 0.88, 0.9), borderWidth: 0.5 });
+  }
   page.drawText("Verifier l'authenticite", {
     x: 360,
     y: 218,
@@ -309,13 +329,13 @@ export async function POST(request: Request) {
       .update(stableStringify({ payload, reference, timestamp }))
       .digest("hex");
     const requestOrigin = new URL(request.url).origin;
-    const isInternal =
+    const isLocalOrigin =
       requestOrigin.includes("localhost") ||
       requestOrigin.includes("127.0.0.1") ||
       requestOrigin.includes("::1");
     const origin =
       process.env.NEXT_PUBLIC_SITE_URL ||
-      (isInternal ? "http://localhost:3000" : requestOrigin);
+      (isLocalOrigin ? "http://localhost:3000" : requestOrigin);
     const verificationUrl = `${origin}/verifier?ref=${encodeURIComponent(
       reference
     )}`;
@@ -327,6 +347,7 @@ export async function POST(request: Request) {
       hash,
       timestamp,
       verificationUrl,
+      photoBase64: typeof payload.photo_identite === "string" ? payload.photo_identite : undefined,
     });
 
     const bucket = process.env.SUPABASE_DOCUMENTS_BUCKET || DEFAULT_BUCKET;

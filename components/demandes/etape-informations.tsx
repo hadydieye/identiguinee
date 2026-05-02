@@ -1,8 +1,9 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { COMMUNES_GUINEE } from "@/lib/communes";
 import { TypeDocument, TYPE_DOCUMENT_LABELS } from "@/lib/types";
-import { Link2 } from "lucide-react";
+import { Link2, Camera, X } from "lucide-react";
 
 export type InfosFormData = {
   nom: string;
@@ -15,7 +16,36 @@ export type InfosFormData = {
   telephone: string;
   lien_beneficiaire: string;
   motif: string;
+  photo_identite?: string; // base64 JPEG recadrée 3:4
 };
+
+// Recadre une image au ratio 3:4 (portrait photo d'identité) et retourne un base64 JPEG
+function cropToIdPhoto(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const targetRatio = 3 / 4;
+      let sx = 0, sy = 0, sw = img.width, sh = img.height;
+      if (img.width / img.height > targetRatio) {
+        sw = img.height * targetRatio;
+        sx = (img.width - sw) / 2;
+      } else {
+        sh = img.width / targetRatio;
+        sy = (img.height - sh) / 2;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = 300;
+      canvas.height = 400;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 300, 400);
+      resolve(canvas.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
 
 const inputCls =
   "w-full bg-[#06090F] border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[#009460] transition-colors";
@@ -33,6 +63,25 @@ export function EtapeInformations({
   onNext: () => void;
   onBack: () => void;
 }) {
+  const photoRef = useRef<HTMLInputElement>(null);
+  const [photoError, setPhotoError] = useState("");
+
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setPhotoError("Formats acceptés : JPG, PNG, WEBP");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError("Taille max : 5 MB");
+      return;
+    }
+    setPhotoError("");
+    const cropped = await cropToIdPhoto(file);
+    onChange({ photo_identite: cropped });
+  };
+
   const field = (key: keyof InfosFormData) => ({
     value: data[key],
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -103,6 +152,58 @@ export function EtapeInformations({
             <input className={inputCls} placeholder="Prénom Nom" {...field("nom_mere")} />
           </div>
         </div>
+      </div>
+
+      {/* Photo d'identité */}
+      <div className="bg-[#0D1117] border border-white/10 rounded-xl p-5 space-y-4">
+        <h3 className="text-white font-semibold text-sm uppercase tracking-wider">
+          Photo d'identité
+        </h3>
+        <div className="flex items-start gap-4">
+          {/* Preview */}
+          <div
+            className="w-[90px] h-[120px] rounded-lg border-2 border-dashed border-white/20 flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer hover:border-[#009460] transition-colors"
+            onClick={() => photoRef.current?.click()}
+          >
+            {data.photo_identite ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={data.photo_identite} alt="Photo" className="w-full h-full object-cover" />
+            ) : (
+              <Camera className="w-7 h-7 text-white/20" />
+            )}
+          </div>
+          <div className="flex-1 space-y-2">
+            <p className="text-white/60 text-xs">
+              Ajoutez une photo portrait. Elle sera automatiquement recadrée au format 3×4 cm pour le document certifié.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => photoRef.current?.click()}
+                className="px-3 py-1.5 rounded-lg border border-white/20 text-white/70 hover:border-[#009460] hover:text-[#009460] transition-colors text-xs"
+              >
+                {data.photo_identite ? "Changer" : "Choisir une photo"}
+              </button>
+              {data.photo_identite && (
+                <button
+                  type="button"
+                  onClick={() => onChange({ photo_identite: undefined })}
+                  className="px-3 py-1.5 rounded-lg border border-white/10 text-white/30 hover:text-[#CE1126] hover:border-[#CE1126]/30 transition-colors text-xs flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" /> Supprimer
+                </button>
+              )}
+            </div>
+            {photoError && <p className="text-[#CE1126] text-xs">{photoError}</p>}
+          </div>
+        </div>
+        <input
+          ref={photoRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handlePhoto}
+        />
       </div>
 
       {/* Infos demandeur */}

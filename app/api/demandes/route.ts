@@ -50,6 +50,10 @@ export async function POST(req: NextRequest) {
   const telephone = sanitize(body.telephone).replace(/[^0-9+\s]/g, "").slice(0, 20);
   const lien_beneficiaire = sanitize(body.lien_beneficiaire) || "moi_meme";
   const motif = typeof body.motif === "string" ? body.motif.trim().slice(0, 500) : "";
+  // photo_identite : base64 JPEG recadrée côté client, on la valide sommairement
+  const photo_identite = typeof body.photo_identite === "string" && body.photo_identite.startsWith("data:image/")
+    ? body.photo_identite
+    : undefined;
 
   // Validations
   if (!VALID_TYPES.includes(type_document))
@@ -123,7 +127,7 @@ export async function POST(req: NextRequest) {
       "Content-Type": "application/json",
       "X-Internal-Secret": process.env.INTERNAL_SECRET ?? "",
     },
-    body: JSON.stringify({ demandeId: data.id, nom, prenom, typeDocument: type_document }),
+    body: JSON.stringify({ demandeId: data.id, nom, prenom, typeDocument: type_document, photo_identite }),
   });
   const genBody = await genRes.text();
   console.log(`[demandes] Réponse generate-document: ${genRes.status} ${genBody}`);

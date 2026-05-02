@@ -36,6 +36,7 @@ export default function NouvelleDemandePage() {
           nom_pere: infos.nom_pere || undefined,
           nom_mere: infos.nom_mere || undefined,
           motif: infos.motif || undefined,
+          photo_identite: infos.photo_identite || undefined,
         }),
       });
       if (!res.ok) {

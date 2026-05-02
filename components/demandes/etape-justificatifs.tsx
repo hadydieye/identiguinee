@@ -31,8 +31,8 @@ export function EtapeJustificatifs({
     setError("");
     const toAdd: JustificatifFile[] = [];
     for (const f of Array.from(newFiles)) {
-      if (!["application/pdf", "image/jpeg", "image/png"].includes(f.type)) {
-        setError("Formats acceptés : PDF, JPG, PNG");
+      if (!["image/jpeg", "image/png", "image/webp"].includes(f.type)) {
+        setError("Formats acceptés : JPG, PNG, WEBP (images uniquement)");
         continue;
       }
       if (f.size > 5 * 1024 * 1024) {
@@ -69,6 +69,8 @@ export function EtapeJustificatifs({
 
   const remove = (i: number) => onFilesChange(files.filter((_, idx) => idx !== i));
 
+  const canProceed = files.length > 0 && files.every((f) => !f.uploading && f.url);
+
   return (
     <div className="space-y-6">
       {/* Documents requis */}
@@ -97,13 +99,13 @@ export function EtapeJustificatifs({
         <Upload className={`w-8 h-8 ${dragging ? "text-[#009460]" : "text-white/30"}`} />
         <div className="text-center">
           <p className="text-white/70 text-sm">Glissez vos fichiers ici ou cliquez pour parcourir</p>
-          <p className="text-white/30 text-xs mt-1">PDF, JPG, PNG — max 5 MB</p>
+          <p className="text-white/30 text-xs mt-1">JPG, PNG, WEBP — max 5 MB</p>
         </div>
         <input
           ref={inputRef}
           type="file"
           multiple
-          accept=".pdf,.jpg,.jpeg,.png"
+          accept="image/jpeg,image/png,image/webp"
           className="hidden"
           onChange={(e) => e.target.files && addFiles(e.target.files)}
         />
@@ -149,7 +151,8 @@ export function EtapeJustificatifs({
         <button
           type="button"
           onClick={onNext}
-          className="flex-1 py-3 rounded-xl bg-[#009460] hover:bg-[#009460]/90 text-white font-semibold text-sm transition-colors"
+          disabled={!canProceed}
+          className="flex-1 py-3 rounded-xl bg-[#009460] hover:bg-[#009460]/90 text-white font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Suivant → Confirmation
         </button>
