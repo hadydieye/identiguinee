@@ -25,19 +25,27 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/register");
-  const isProtected = pathname.startsWith("/dashboard");
+  const isProtected = pathname.startsWith("/dashboard") || pathname.startsWith("/mes-demandes") || pathname.startsWith("/nouvelle-demande");
+  const isAdmin = pathname.startsWith("/nca");
 
-  if (isProtected && !user) {
+  if ((isProtected || isAdmin) && !user) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
+  if (isAdmin && user) {
+    if (user.user_metadata?.role !== "admin") {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+  }
+
   if (isAuthPage && user) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    const dest = user.user_metadata?.role === "admin" ? "/nca" : "/dashboard";
+    return NextResponse.redirect(new URL(dest, request.url));
   }
 
   return supabaseResponse;
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/register"],
+  matcher: ["/dashboard/:path*", "/nca/:path*", "/mes-demandes/:path*", "/nouvelle-demande/:path*", "/login", "/register"],
 };

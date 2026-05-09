@@ -4,11 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
-  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -18,13 +16,22 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setError(error.message);
+
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error ?? "Erreur de connexion");
       setLoading(false);
-    } else {
-      router.push("/dashboard");
+      return;
     }
+
+    router.push(data.role === "admin" ? "/nca" : "/dashboard");
   }
 
   return (
